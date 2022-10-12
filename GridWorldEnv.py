@@ -1,11 +1,25 @@
 
 from enum import EnumMeta
+from inspect import getargvalues
 import numpy as np
+from random import choice
+import copy
 
 class agent():
     def __init__(self,x,y):
         self.row = x
         self.col = y
+
+
+    def step(self,value):
+        if value == 1:
+            self.row += 1
+        elif value == 2:
+            self.row -= 1
+        elif value == 3:
+            self.col -= 1
+        elif value == 4:
+            self.col += 1
 
 
         
@@ -20,7 +34,9 @@ class env():
         self.Pa = 1 - Pe
         self.action = action
         self.gama = gama
-        self.table = []
+        # self.policy = np.random.randint(0,len(action),size=(self.w,self.h))
+        self.policy = [[np.random.randint(0, len(action)) for i in range (self.w)] for j in range(self.h)]
+        self.initPolicy()
         self.reward = getGridWorld()
 
     def isBarrier(self,agent): # Check if given index is a barrier
@@ -33,6 +49,13 @@ class env():
             return True
 
         else: return False
+
+
+    def initPolicy(self):
+        self.policy[1][1] = None
+        self.policy[1][2] = None
+        self.policy[3][1] = None
+        self.policy[3][2] = None
 
 
 
@@ -95,12 +118,22 @@ class env():
 
 
 
-    def calculateValue(self,agent,map):
+    def calculateValue(self,agent,map,mode = 1):
         value_sum = 0
         sur = self.getSurrounding(agent)
         cnt, value = self.getAllValue(agent,sur,map)
-        index = value.index(max(value))
-        max_value = value[index]
+        if mode == 1:
+            index = value.index(max(value))
+            max_value = value[index]
+
+        else:
+            max_action = self.getPolicyAction(agent)
+            if not max_action in cnt:
+                max_action = choice(cnt)
+                self.policy[agent.row][agent.col] = max_action
+            index = cnt.index(max_action)
+            max_value = value[index]
+
         # value_sum = self.Pa * (self.getSelfValue(agent) + self.gama * max_value) # Adding self value to value iteration
         P_error = self.Pe / 4
         false_cnt = 0
@@ -128,14 +161,33 @@ class env():
                     # value_sum += P_error * (self.getSelfValue(agent) + self.gama * v)
                     value_sum += P_error * (self.getSelfValue(agent,self.reward) + self.gama * v)
 
+
+        # if mode != 1:
+        #     self.map[agent.row][agent.col] = value_sum
+        #     agent.step(max_action)
+
+
         return value_sum
 
+    # def getValue(self,agent,action):
+    #     if action == 0:
+    #         return self.getUpValue(agent,self.map)
 
-    def ValueIteration(self,agent,mp):   
+    #     if action == 1:
+    #         return self.getDownValue(agent,self.map)
+
+    #     if action == 2:
+    #         return self.getLeftValue(agent,self.map)
+
+    #     if action == 3:
+    #         return self.getRightValue(agent,self.map)
+
+
+    def ValueIteration(self,agent,mp, mode):   
         while(agent.row < self.h):
             while(agent.col < self.w):
                 if self.isBarrier(agent) is False:
-                    mp[agent.row][agent.col] = round(self.calculateValue(agent,self.map),3)
+                    mp[agent.row][agent.col] = (self.calculateValue(agent,self.map,mode))
                     # self.map[agent.row][agent.col] = map_re[agent.row][agent.col]
                     agent.col += 1
                 else: 
@@ -151,13 +203,69 @@ class env():
         return mp
 
 
-    def policyIteration(self, agent, table):
+    def updateValueFunction(self,agent):   
+        mp = getGridWorld()
+        previous_value = copy.deepcopy(mp)
+        # cnt = 0
+        while True:
+            mp = self.ValueIteration(agent,mp,2)
+            if previous_value == mp:
+                break
+            previous_value = copy.deepcopy(mp)
+            cnt +=1
 
-        return 1
-
-
-
+        # print(cnt)
+        return mp
     
+
+    def updatePolicy(self,agent):
+        mp = self.updateValueFunction(agent)
+        agent.row = 0
+        agent.col = 0
+        for i in range(self.w):
+            for j in range(self.h):
+                if self.isBarrier(agent) is False:
+                    sur = self.getSurrounding(agent)
+                    cnt, value = self.getAllValue(agent,sur,mp)
+                    max_action = cnt[value.index(max(value))]
+                    self.policy[agent.row][agent.col] = max_action
+                    agent.col += 1
+                else: 
+                    agent.col += 1
+
+            agent.row += 1
+            agent.col = 0
+
+
+        agent.row = 0
+        agent.col = 0
+
+
+
+    def policyIteration(self,agent):
+        cnt = 0
+        old = copy.deepcopy(self.policy)
+        while True:
+            self.updateValueFunction(agent)
+            self.updatePolicy(agent)
+            if(old == self.policy):
+                break
+            old = copy.deepcopy(self.policy)
+
+            cnt += 1
+
+        # print("policy Iteration{}".format(cnt))
+
+        return cnt, self.policy
+                
+                
+
+
+
+    def getPolicyAction(self,agent):
+        return self.policy[agent.row][agent.col]
+
+ 
         
 
 def getGridWorld():
@@ -193,17 +301,11 @@ def main():
     action = [0,1,2,3,4]
     gama = 0.8
     E = env(mp1,0.5,action, gama)
-    mp2 = E.ValueIteration(ag,mp2) # k = 2
-    while abs(mp1[4][1] - mp2[4][1]) > 0.01:
-        mp1 = E.ValueIteration(ag,mp1)
-        mp2 = E.ValueIteration(ag,mp2)
-
-
-    return mp1
+    cnt, policy = E.policyIteration(ag)
+    print(cnt)
+    return policy
 
 if __name__ == '__main__':
     a = main()
-
-    print(1)
 
     
