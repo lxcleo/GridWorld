@@ -206,7 +206,7 @@ class env():
     def updateValueFunction(self,agent):   
         mp = getGridWorld()
         previous_value = copy.deepcopy(mp)
-        # cnt = 0
+        cnt = 0
         while True:
             mp = self.ValueIteration(agent,mp,2)
             if previous_value == mp:
