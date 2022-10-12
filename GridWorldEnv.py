@@ -27,7 +27,7 @@ class env():
         Bar = self.map[agent.row][agent.col] is None
         # Negative_Reward = agent.col == 4
         # Rs = agent.row == 2 and agent.col == 2
-        # Rd = agent.row == 4 and agent.col == 2
+        # Rd = agent.row == 4 and agent.col == 
 
         if Bar:
             return True
