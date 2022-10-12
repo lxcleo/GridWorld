@@ -21,9 +21,6 @@ class agent():
         elif value == 4:
             self.col += 1
 
-
-        
-
 class env():
     # Action = [0,1,2,3,4] corresponding to [up(0), down(1), left(2), right(3) don't move(4)]
     def __init__(self,map,Pe,action,gama = 1.0):  
@@ -35,8 +32,6 @@ class env():
         self.action = action
         self.gama = gama
         # self.policy = np.random.randint(0,len(action),size=(self.w,self.h))
-        self.policy = [[np.random.randint(0, len(action)) for i in range (self.w)] for j in range(self.h)]
-        self.initPolicy()
         self.reward = getGridWorld()
 
     def isBarrier(self,agent): # Check if given index is a barrier
@@ -49,13 +44,6 @@ class env():
             return True
 
         else: return False
-
-
-    def initPolicy(self):
-        self.policy[1][1] = None
-        self.policy[1][2] = None
-        self.policy[3][1] = None
-        self.policy[3][2] = None
 
 
 
@@ -116,8 +104,25 @@ class env():
 
         return [cnt,value]
 
+    def getValue(self,agent,action):
+        if action == 0:
+            return self.getUpValue(agent,self.map)
+
+        if action == 1:
+            return self.getDownValue(agent,self.map)
+
+        if action == 2:
+            return self.getLeftValue(agent,self.map)
+
+        if action == 3:
+            return self.getRightValue(agent,self.map)
 
 
+
+class VI(env):
+    def __init__(self, map, Pe, action, gama=1):
+        super().__init__(map, Pe, action, gama)
+        
     def calculateValue(self,agent,map,mode = 1):
         value_sum = 0
         sur = self.getSurrounding(agent)
@@ -169,20 +174,6 @@ class env():
 
         return value_sum
 
-    # def getValue(self,agent,action):
-    #     if action == 0:
-    #         return self.getUpValue(agent,self.map)
-
-    #     if action == 1:
-    #         return self.getDownValue(agent,self.map)
-
-    #     if action == 2:
-    #         return self.getLeftValue(agent,self.map)
-
-    #     if action == 3:
-    #         return self.getRightValue(agent,self.map)
-
-
     def ValueIteration(self,agent,mp, mode):   
         while(agent.row < self.h):
             while(agent.col < self.w):
@@ -201,7 +192,15 @@ class env():
         agent.col = 0
         self.map = mp
         return mp
+        
 
+
+class PI(VI):
+
+    def __init__(self, map, Pe, action, gama=1):
+        super().__init__(map, Pe, action, gama)
+        self.policy = [[np.random.randint(0, len(self.action)) for i in range (self.w)] for j in range(self.h)]
+        self.initPolicy()
 
     def updateValueFunction(self,agent):   
         mp = getGridWorld()
@@ -242,6 +241,12 @@ class env():
 
 
 
+    def initPolicy(self):
+        self.policy[1][1] = None
+        self.policy[1][2] = None
+        self.policy[3][1] = None
+        self.policy[3][2] = None
+
     def policyIteration(self,agent):
         cnt = 0
         old = copy.deepcopy(self.policy)
@@ -264,9 +269,6 @@ class env():
 
     def getPolicyAction(self,agent):
         return self.policy[agent.row][agent.col]
-
- 
-        
 
 def getGridWorld():
     w, h = (5, 5)
@@ -300,8 +302,9 @@ def main():
     ag = agent(0,0)
     action = [0,1,2,3,4]
     gama = 0.8
-    E = env(mp1,0.5,action, gama)
-    cnt, policy = E.policyIteration(ag)
+    Pe = 0.5
+    pi = PI(mp1,Pe,action, gama)
+    cnt, policy = pi.policyIteration(ag)
     print(cnt)
     return policy
 
